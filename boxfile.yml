@@ -1,0 +1,80 @@
+run.config:
+  fs_watch: true
+  engine: php
+  engine.config:
+    runtime: php-7.2
+    extensions:
+      - curl
+      - ctype
+      - gd
+      - zip
+      - mcrypt
+      - mbstring
+      - dom
+      - pdo
+      - pdo_mysql
+      - xml
+      - xmlwriter
+      - tokenizer
+      - session
+    
+    zend_extensions:
+      - opcache
+    
+    dev_zend_extensions:
+      add:
+        - xdebug
+      rm:
+        - opcache
+    
+    webserver: 'nginx'
+    document_root: public
+    nginx_index_list:
+      - index.php
+      - index.html
+    nginx_default_gateway: 'index.php'
+
+    composer_install: "composer install --no-interaction --prefer-source"
+
+  extra_packages:
+    - newrelic
+    - nodejs
+
+  extra_steps:
+    - cp xdebug.ini /data/etc/php.dev.d/xdebug.ini
+
+  extra_path_dirs:
+    - vendor/bin
+    - node_modules/.bin
+
+  build_triggers:
+    - package.json
+
+web.main:
+  start:
+    php: php-server
+  
+  writable_dirs:
+    - tmp/cache
+    - bootstrap/cache
+  
+  network_dirs:
+    data.storage:
+      - storage
+
+  log_watch:
+    laravel[error]: /app/storage/logs/laravel.log
+    php[error]: /data/var/log/php/php_error.log
+    php[fpm]: /data/var/log/php/php-fpm.log
+
+data.storage:
+  image: nanobox/unfs:0.9
+
+data.db:
+  image: nanobox/mysql:5.6
+
+deploy.config:
+  before_live:
+    web.main:
+      - php artisan migrate --force
+      - mkdir -p storage/framework/{sessions,cache,views}
